@@ -28,4 +28,4 @@ If you need to adapt this for more KiwiSDR sites, you can add a line at the begi
 ```
 // @match        https://irk.swl.su/*
 ```
-Where https://irk.swl.su/* can be changed to any KiwiSDR site you need. Pay attention to the http(s) protocol, wildcard *, and note that there is no need to add a port number.
+Where `https://irk.swl.su/*` can be changed to any KiwiSDR site you need. Pay attention to the http(s) protocol, wildcard `*`, and note that there is no need to add a port number.
