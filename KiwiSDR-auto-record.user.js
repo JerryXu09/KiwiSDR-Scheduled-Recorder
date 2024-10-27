@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         KiwiSDR定时录音
 // @namespace    http://tampermonkey.net/
-// @version      0.3
-// @description  让用户方便的定时开启和关闭录制，而不用手动操作。
-// @author       JerryXu
+// @version      0.4
+// @description  让用户方便地定时开启和关闭录制。
+// @author       JerryXu09
 // @match        http://*.proxy.kiwisdr.com/*
 // @grant        none
 // ==/UserScript==
-// 可以在上面添加通配之外的KiwiSDR站点。
 
 (function() {
     'use strict';
@@ -19,7 +18,7 @@
     const clickButton = (button) => {
         if (button) {
             button.click();
-            console.log('按钮已点击，开始录制');
+            console.log('按钮已点击，操作已执行');
         } else {
             console.log('按钮未找到');
         }
@@ -46,10 +45,10 @@
     inputContainer.style.zIndex = 1000;
     document.body.appendChild(inputContainer);
 
-    // 创建输入框和标签
+    // 创建输入框和标签（用来输入具体的开始和停止时间）
     inputContainer.innerHTML = `
-        <label>多少毫秒后开始录制：<input id="firstClickDelay" type="number" value="5000"></label><br><br>
-        <label>多少毫秒后停止录制：<input id="secondClickDelay" type="number" value="10000"></label><br><br>
+        <label>开始时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="startTime" type="text" placeholder="2024-10-27 14:30:00"></label><br><br>
+        <label>停止时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="endTime" type="text" placeholder="2024-10-27 14:35:00"></label><br><br>
         <button id="confirmButton">确认</button>
         <button id="cancelButton">取消</button>
     `;
@@ -64,35 +63,53 @@
 
     // 确认按钮点击事件
     confirmButton.addEventListener('click', () => {
-        const firstClickDelay = parseInt(document.getElementById('firstClickDelay').value, 10);
-        const secondClickDelay = parseInt(document.getElementById('secondClickDelay').value, 10);
+        const startTimeInput = document.getElementById('startTime').value;
+        const endTimeInput = document.getElementById('endTime').value;
 
-        if (isNaN(firstClickDelay) || isNaN(secondClickDelay)) {
-            alert("请输入有效的数字！");
+        // 将用户输入的时间转换为 Date 对象
+        const startTime = new Date(startTimeInput.replace(/-/g, '/')); // 兼容某些浏览器
+        const endTime = new Date(endTimeInput.replace(/-/g, '/'));
+
+        const now = new Date();
+
+        // 校验输入时间是否合法
+        if (isNaN(startTime) || isNaN(endTime)) {
+            alert("请输入有效的开始和停止时间！");
+            return;
+        }
+        if (startTime <= now) {
+            alert("开始时间必须在当前时间之后！");
+            return;
+        }
+        if (endTime <= startTime) {
+            alert("停止时间必须在开始时间之后！");
             return;
         }
 
-        // 开始点击流程
+        // 计算与当前时间的差值，转换为毫秒
+        const startDelay = startTime - now;
+        const stopDelay = endTime - now;
+
         const button = getButton();
-
-        // 禁用开始按钮，防止重复启动
         startButton.disabled = true;
-        startButton.innerText = '点击操作进行中';
+        startButton.innerText = '定时操作进行中...';
 
-        // 延迟第一次点击
+        // 定时开始录音
         setTimeout(() => {
             clickButton(button);
+            console.log(`录音已开始：${startTimeInput}`);
 
-            // 延迟第二次点击
+            // 定时停止录音
             setTimeout(() => {
                 clickButton(button);
+                console.log(`录音已停止：${endTimeInput}`);
 
-                // 点击完成后恢复按钮状态
+                // 恢复按钮状态
                 startButton.disabled = false;
-                startButton.innerText = '开始录制';
-            }, secondClickDelay);
+                startButton.innerText = '设置定时录制';
+            }, stopDelay - startDelay);
 
-        }, firstClickDelay);
+        }, startDelay);
 
         // 隐藏输入框
         inputContainer.style.display = 'none';
