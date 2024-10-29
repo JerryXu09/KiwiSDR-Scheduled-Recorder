@@ -6,6 +6,7 @@
 
 ## 特点：
 - 根据预定时间在KiwiSDR上自动启动和停止录制。
+- 可以在录制结束后自动保存WF。
 - 默认通配KiwiSDR代理URL(*.proxy.kiwisdr.com)，如有需要可以自己在脚本中添加其它站点。 
 - 简化了设置精确录音时间的过程。
 
@@ -22,6 +23,7 @@ This user script is designed to work with KiwiSDR, allowing users to set start a
 ## Features:
 - Automatically start and stop recording on KiwiSDR at scheduled times.
 - By default, the script matches KiwiSDR proxy URLs (`*.proxy.kiwisdr.com`). If necessary, you can add other URLs to the script yourself.
+- Automatically save WF after recorded.
 - Simplifies the process of setting precise recording times.
 
 If you need to adapt this for more KiwiSDR sites, you can add a line at the beginning of the script:
