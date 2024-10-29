@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         KiwiSDR定时录音
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  让用户方便地定时开启和关闭录制。
 // @author       JerryXu09
+// @license      MIT
 // @match        http://*.proxy.kiwisdr.com/*
 // @grant        none
 // ==/UserScript==
@@ -13,6 +14,9 @@
 
     // 获取录音按钮，通过类名选择器 `.id-rec1`
     const getButton = () => document.querySelector('.id-rec1');
+    
+    // 获取保存WF按钮，通过类名选择器 `id-btn-grp-56`
+    const getSaveWFButton = () => document.querySelector('.id-btn-grp-56');
 
     // 点击按钮的函数
     const clickButton = (button) => {
@@ -45,10 +49,27 @@
     inputContainer.style.zIndex = 1000;
     document.body.appendChild(inputContainer);
 
-    // 创建输入框和标签（用来输入具体的开始和停止时间）
+    // 获取当前时间，并格式化为 "YYYY-MM-DD HH:MM:SS"
+    const formatDateTime = (date) => {
+        const pad = (n) => n < 10 ? '0' + n : n;
+        return date.getFullYear() + '-' +
+               pad(date.getMonth() + 1) + '-' +
+               pad(date.getDate()) + ' ' +
+               pad(date.getHours()) + ':' +
+               pad(date.getMinutes()) + ':' +
+               pad(date.getSeconds());
+    };
+
+    // 设置默认的开始和停止时间
+    const now = new Date();
+    const startDefault = new Date(now.getTime() + 5 * 60 * 1000); // 5分钟后
+    const stopDefault = new Date(now.getTime() + 10 * 60 * 1000); // 10分钟后
+
+    // 创建输入框、复选框和标签（用于设置开始、停止时间和WF保存选项），并使用默认时间
     inputContainer.innerHTML = `
-        <label>开始时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="startTime" type="text" placeholder="2024-10-27 14:30:00"></label><br><br>
-        <label>停止时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="endTime" type="text" placeholder="2024-10-27 14:35:00"></label><br><br>
+        <label>开始时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="startTime" type="text" value="${formatDateTime(startDefault)}"></label><br><br>
+        <label>停止时间 (格式: YYYY-MM-DD HH:MM:SS)：<input id="endTime" type="text" value="${formatDateTime(stopDefault)}"></label><br><br>
+        <label><input id="saveWFCheckbox" type="checkbox" checked> 录音完成后保存WF</label><br><br>
         <button id="confirmButton">确认</button>
         <button id="cancelButton">取消</button>
     `;
@@ -65,6 +86,7 @@
     confirmButton.addEventListener('click', () => {
         const startTimeInput = document.getElementById('startTime').value;
         const endTimeInput = document.getElementById('endTime').value;
+        const saveWF = document.getElementById('saveWFCheckbox').checked; // 获取复选框状态
 
         // 将用户输入的时间转换为 Date 对象
         const startTime = new Date(startTimeInput.replace(/-/g, '/')); // 兼容某些浏览器
@@ -103,6 +125,19 @@
             setTimeout(() => {
                 clickButton(button);
                 console.log(`录音已停止：${endTimeInput}`);
+
+                // 检查用户是否选择了保存WF选项
+                if (saveWF) {
+                    const saveWFButton = getSaveWFButton();
+                    if (saveWFButton) {
+                        setTimeout(() => {
+                            clickButton(saveWFButton);
+                            console.log("WF图像已保存为JPG");
+                        }, 1000); // 延迟1秒点击保存WF按钮，确保录音操作已完成
+                    } else {
+                        console.log("保存WF按钮未找到");
+                    }
+                }
 
                 // 恢复按钮状态
                 startButton.disabled = false;
