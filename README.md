@@ -1,14 +1,16 @@
-# KiwiSDR-Auto-Record
+# KiwiSDR Scheduled Recorder
+
+> Last update: Aug 5, 2025
 
 [English version](#english)
 
-此用户脚本专为与KiwiSDR一起使用而设计，允许用户设置录制的开始和停止时间，从而使录制过程自动化。该脚本在带有Tampermonkey或类似扩展的浏览器环境中运行，并通过自动单击录制按钮与KiwiSDR的界面进行交互。
+此油猴脚本为 KiwiSDR 网页而设计，使得用户可以定时开关录音功能。
 
 ## 特点：
-- 根据预定时间在KiwiSDR上自动启动和停止录制。
-- 可以在录制结束后自动保存WF。
-- 默认通配KiwiSDR代理URL(*.proxy.kiwisdr.com)，如有需要可以自己在脚本中添加其它站点。 
-- 简化了设置精确录音时间的过程。
+- 根据预定时间在 KiwiSDR 上自动启动和停止录制，精确到秒(具体精确度取决于设备时间和 Kiwi 的缓存造成的延迟)。
+- 可以在录制结束后自动保存WF，但**仅限结束前的300s**。
+- 默认通配 KiwiSDR 代理URL(*.proxy.kiwisdr.com)，如有需要可以自己在脚本中添加其它站点。 
+- 稍微简化了设置精确录音时间的过程。
 
 如果需要适配更多KiwiSDR站点，请自行在脚本开头中添加一行：
 ```
@@ -18,16 +20,17 @@
 
 - - -
 # English
-This user script is designed to work with KiwiSDR, allowing users to set start and stop times for recording, thereby automating the recording process. The script runs in a browser environment with Tampermonkey or a similar extension and interacts with KiwiSDR's interface by automatically clicking the record button.
+
+This Tampermonkey script is designed for KiwiSDR sites, allowing users to schedule the recording function.
 
 ## Features:
-- Automatically start and stop recording on KiwiSDR at scheduled times.
-- By default, the script matches KiwiSDR proxy URLs (`*.proxy.kiwisdr.com`). If necessary, you can add other URLs to the script yourself.
-- Automatically save WF after recorded.
+- Automatically starts and stops recording on KiwiSDR at scheduled times, accurate to the second (precision depends on device time and delays caused by Kiwi's buffering).
+- Can automatically save the WF after recording ends, but **only for the last 300s**.
+- By default, it matches KiwiSDR proxy URLs (*.proxy.kiwisdr.com); you can add other sites in the script if needed.
 - Simplifies the process of setting precise recording times.
 
-If you need to adapt this for more KiwiSDR sites, you can add a line at the beginning of the script:
+If you need to adapt to more KiwiSDR sites, add a line at the beginning of the script:
 ```
 // @match        https://irk.swl.su/*
 ```
-Where `https://irk.swl.su/*` can be changed to any KiwiSDR site you need. Pay attention to the http(s) protocol, wildcard `*`, and note that there is no need to add a port number.
+Where `https://irk.swl.su/*` can be changed to any KiwiSDR site you need. No need to include the port number.
