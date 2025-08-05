@@ -1,6 +1,7 @@
 # KiwiSDR Scheduled Recorder
 
 > Last update: Aug 5, 2025
+> 
 > 重新设计了界面，添加了对录音意外中断的判断。
 
 [English version](#english)
