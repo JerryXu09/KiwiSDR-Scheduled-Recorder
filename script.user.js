@@ -6,6 +6,7 @@
 // @author       JerryXu09
 // @license      MIT
 // @match        http://*.proxy.kiwisdr.com/*
+// @match        http://*.proxy2.kiwisdr.com/*
 // @grant        none
 // ==/UserScript==
 
