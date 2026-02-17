@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         KiwiSDR Scheduled Recorder
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  KiwiSDR scheduled recorder with frequency/mode presets. 定时录音，支持预设频率和解调模式。
 // @author       JerryXu09
 // @license      MIT
@@ -28,21 +28,25 @@
             cancelSchedule: '取消计划',
             close: '收起',
             currentInfo: '当前',
-            statusIdle: '就绪',
-            statusScheduled: '已计划',
-            statusWaitStart: '等待开始',
-            statusRecording: '录音中',
-            statusDone: '录音完成',
-            statusCancelled: '已取消',
-            statusInterrupted: '录音被中断，计划已取消',
-            statusAlreadyRec: '检测到已在录音，将在指定时间停止',
-            wfSaved: '频谱图已保存',
+            logReady: '就绪',
+            logScheduled: '计划已设定',
+            logWaitStart: '等待开始',
+            logRecording: '录音中',
+            logRecStarted: '录音已开始',
+            logRecStopped: '录音已停止',
+            logDone: '录音完成',
+            logCancelled: '计划已取消',
+            logInterrupted: '⚠ 录音被中断，计划已取消',
+            logAlreadyRec: '检测到已在录音，将在指定时间停止',
+            logStartPast: '开始时间已过，立即开始',
+            logWfSaved: '频谱图已保存',
+            logTuning: '调谐至',
+            logStopAt: '将停止于',
             errInvalidTime: '请输入有效的时间！',
-            errStartPast: '开始时间必须在当前时间之后！',
+            errEndPast: '结束时间必须在当前时间之后！',
             errEndBeforeStart: '结束时间必须在开始时间之后！',
             errInvalidFreq: '频率无效，范围 0 ~ 30000 kHz',
             countdown: '倒计时',
-            tuningTo: '正在调谐至',
         },
         en: {
             title: 'Scheduled Rec',
@@ -57,21 +61,25 @@
             cancelSchedule: 'Cancel Schedule',
             close: 'Collapse',
             currentInfo: 'Current',
-            statusIdle: 'Ready',
-            statusScheduled: 'Scheduled',
-            statusWaitStart: 'Waiting to start',
-            statusRecording: 'Recording...',
-            statusDone: 'Recording complete',
-            statusCancelled: 'Cancelled',
-            statusInterrupted: 'Recording interrupted, schedule cancelled',
-            statusAlreadyRec: 'Already recording, will stop at scheduled time',
-            wfSaved: 'Waterfall saved',
+            logReady: 'Ready',
+            logScheduled: 'Schedule confirmed',
+            logWaitStart: 'Waiting to start',
+            logRecording: 'Recording...',
+            logRecStarted: 'Recording started',
+            logRecStopped: 'Recording stopped',
+            logDone: 'Recording complete',
+            logCancelled: 'Schedule cancelled',
+            logInterrupted: '⚠ Recording interrupted, schedule cancelled',
+            logAlreadyRec: 'Already recording, will stop at scheduled time',
+            logStartPast: 'Start time has passed, starting now',
+            logWfSaved: 'Waterfall saved',
+            logTuning: 'Tuning to',
+            logStopAt: 'Will stop at',
             errInvalidTime: 'Please enter valid times!',
-            errStartPast: 'Start time must be in the future!',
+            errEndPast: 'End time must be in the future!',
             errEndBeforeStart: 'End time must be after start time!',
             errInvalidFreq: 'Invalid frequency, range 0–30000 kHz',
             countdown: 'Countdown',
-            tuningTo: 'Tuning to',
         }
     };
     const L = navigator.language.startsWith('zh') ? 'zh' : 'en';
@@ -221,14 +229,26 @@
             background: #c0392b; color: #fff; border-color: #a5301f;
         }
         .ksr-btn-cancel:hover { background: #a5301f; }
-        #ksr-status {
-            margin-top: 8px; padding: 6px 8px; background: #e8e8e8;
-            border-radius: 3px; font-size: 11px; color: #555;
-            text-align: center; min-height: 16px; line-height: 1.4;
+        #ksr-log {
+            margin-top: 8px; padding: 0; background: #1a1a1a;
+            border-radius: 3px; font-size: 10px; color: #aaa;
+            min-height: 40px; max-height: 120px; overflow-y: auto;
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            line-height: 1.5;
         }
-        #ksr-status.ksr-status-active { background: #d4edda; color: #155724; }
-        #ksr-status.ksr-status-recording { background: #f8d7da; color: #721c24; }
-        #ksr-status.ksr-status-error { background: #fff3cd; color: #856404; }
+        #ksr-log .ksr-log-entry { padding: 2px 8px; border-bottom: 1px solid #2a2a2a; }
+        #ksr-log .ksr-log-entry:last-child { border-bottom: none; }
+        #ksr-log .ksr-log-ts { color: #666; margin-right: 6px; }
+        #ksr-log .ksr-log-info { color: #8cbfb0; }
+        #ksr-log .ksr-log-warn { color: #e5c07b; }
+        #ksr-log .ksr-log-error { color: #e06c75; }
+        #ksr-log .ksr-log-ok { color: #98c379; }
+        #ksr-countdown {
+            margin-top: 4px; padding: 4px 8px; font-size: 11px;
+            color: #555; text-align: center; display: none;
+        }
+        #ksr-countdown.ksr-cd-active { display: block; color: #155724; }
+        #ksr-countdown.ksr-cd-recording { display: block; color: #721c24; }
         #ksr-info {
             font-size: 11px; color: #888; padding: 2px 0 6px;
             border-bottom: 1px solid #ddd; margin-bottom: 8px;
@@ -299,7 +319,8 @@
                     <button class="ksr-btn ksr-btn-cancel" id="ksr-cancel">${t.cancelSchedule}</button>
                 </div>
 
-                <div id="ksr-status">${t.statusIdle}</div>
+                <div id="ksr-log"></div>
+                <div id="ksr-countdown"></div>
             </div>
         `;
 
@@ -346,13 +367,31 @@
         });
     }
 
-    // ==================== Status Display ====================
-    function setStatus(text, type) {
-        const el = document.getElementById('ksr-status');
+    // ==================== Log Display ====================
+    function log(text, level) {
+        const el = document.getElementById('ksr-log');
         if (!el) return;
+        const entry = document.createElement('div');
+        entry.className = 'ksr-log-entry';
+        const ts = document.createElement('span');
+        ts.className = 'ksr-log-ts';
+        ts.textContent = formatTime(new Date());
+        const msg = document.createElement('span');
+        msg.className = 'ksr-log-' + (level || 'info');
+        msg.textContent = text;
+        entry.appendChild(ts);
+        entry.appendChild(msg);
+        el.appendChild(entry);
+        el.scrollTop = el.scrollHeight;
+        console.log('[KSR] ' + text);
+    }
+
+    function setCountdown(text, type) {
+        const el = document.getElementById('ksr-countdown');
+        if (!el) return;
+        if (!text) { el.className = ''; el.textContent = ''; return; }
         el.textContent = text;
-        el.className = 'ksr-status-' + (type || '');
-        el.id = 'ksr-status';
+        el.className = type ? ('ksr-cd-' + type) : '';
     }
 
     function updateInfo() {
@@ -382,6 +421,7 @@
         document.getElementById('ksr-btn-row-main').style.display = 'flex';
         document.getElementById('ksr-btn-row-cancel').style.display = 'none';
         setFormEnabled(true);
+        setCountdown('', '');
     }
 
     function setFormEnabled(enabled) {
@@ -398,13 +438,13 @@
             const now = Date.now();
 
             if (state.scheduledStart && now < state.scheduledStart.getTime()) {
-                // Waiting to start
                 const remain = state.scheduledStart.getTime() - now;
-                setStatus(`${t.statusWaitStart}  ⏱ ${t.countdown}: ${formatCountdown(remain)}`, 'active');
+                setCountdown(`${t.logWaitStart}  ⏱ ${t.countdown}: ${formatCountdown(remain)}`, 'active');
             } else if (state.scheduledEnd && now < state.scheduledEnd.getTime()) {
-                // Recording in progress
                 const remain = state.scheduledEnd.getTime() - now;
-                setStatus(`${t.statusRecording}  ⏱ ${formatCountdown(remain)}`, 'recording');
+                setCountdown(`${t.logRecording}  ⏱ ${formatCountdown(remain)}`, 'recording');
+            } else {
+                setCountdown('', '');
             }
         }, 500);
     }
@@ -414,24 +454,42 @@
             if (!state.isScheduled) return;
             const isRec = kiwi.isRecording();
 
-            // Detect unexpected interruption
             if (state.wasRecording && !isRec) {
-                console.log('[KSR] Recording interrupted unexpectedly');
+                log(t.logInterrupted, 'error');
                 clearSchedule();
-                setStatus(t.statusInterrupted, 'error');
                 return;
             }
             state.wasRecording = isRec;
         }, 1000);
     }
 
-    function scheduleRecording(startTime, endTime, freqKHz, mode, saveWF) {
+    function doTuneAndStartRec(freqKHz, mode) {
+        const shouldTune = (freqKHz != null) || (mode != null);
+        if (freqKHz != null && mode != null) {
+            log(`${t.logTuning} ${freqKHz} kHz ${mode.toUpperCase()}`, 'info');
+            kiwi.setFreqMode(freqKHz, mode);
+        } else if (freqKHz != null) {
+            log(`${t.logTuning} ${freqKHz} kHz`, 'info');
+            kiwi.setFreqMode(freqKHz, kiwi.getMode());
+        } else if (mode != null) {
+            log(`${t.logTuning} ${mode.toUpperCase()}`, 'info');
+            kiwi.setMode(mode);
+        }
+
+        const recDelay = shouldTune ? 500 : 0;
+        setTimeout(() => {
+            kiwi.startRec();
+            state.wasRecording = true;
+            log(t.logRecStarted, 'ok');
+        }, recDelay);
+    }
+
+    function scheduleRecording(startTime, endTime, freqKHz, mode, saveWF, startNow) {
         const now = new Date();
-        const alreadyRecording = kiwi.isRecording();
 
         clearSchedule();
         state.isScheduled = true;
-        state.scheduledStart = startTime;
+        state.scheduledStart = startNow ? now : startTime;
         state.scheduledEnd = endTime;
 
         document.getElementById('ksr-btn-row-main').style.display = 'none';
@@ -439,72 +497,50 @@
         setFormEnabled(false);
 
         const doStop = () => {
-            console.log('[KSR] Stopping recording');
             kiwi.stopRec();
             state.wasRecording = false;
+            log(t.logRecStopped, 'ok');
 
             if (saveWF) {
                 setTimeout(() => {
                     kiwi.saveWF();
-                    console.log('[KSR] Waterfall saved');
-                    setStatus(t.statusDone + ' · ' + t.wfSaved, '');
+                    log(t.logWfSaved, 'ok');
                 }, 1500);
-            } else {
-                setStatus(t.statusDone, '');
             }
 
+            log(t.logDone, 'info');
             setTimeout(() => clearSchedule(), 3000);
         };
 
+        const alreadyRecording = kiwi.isRecording();
+
         if (alreadyRecording) {
-            // Already recording: only schedule stop
-            setStatus(t.statusAlreadyRec, 'recording');
+            log(t.logAlreadyRec, 'warn');
+            log(`${t.logStopAt} ${formatTime(endTime)}`, 'info');
             state.wasRecording = true;
-
-            const stopDelay = endTime.getTime() - now.getTime();
-            state.stopTimer = setTimeout(doStop, stopDelay);
+            state.stopTimer = setTimeout(doStop, endTime.getTime() - now.getTime());
+        } else if (startNow) {
+            log(t.logStartPast, 'warn');
+            log(`${t.logStopAt} ${formatTime(endTime)}`, 'info');
+            doTuneAndStartRec(freqKHz, mode);
+            state.stopTimer = setTimeout(doStop, endTime.getTime() - now.getTime());
         } else {
-            // Schedule start and stop
+            log(`${t.logScheduled}: ${formatTime(startTime)} → ${formatTime(endTime)}`, 'info');
+
             const startDelay = startTime.getTime() - now.getTime();
-            const stopDelay = endTime.getTime() - now.getTime();
-
             state.startTimer = setTimeout(() => {
-                console.log('[KSR] Starting recording');
-
-                // Tune to target frequency/mode before recording
-                const shouldTune = (freqKHz != null) || (mode != null);
-                if (freqKHz != null && mode != null) {
-                    console.log(`[KSR] Tuning to ${freqKHz} kHz ${mode}`);
-                    setStatus(`${t.tuningTo} ${freqKHz} kHz ${mode.toUpperCase()}...`, 'active');
-                    kiwi.setFreqMode(freqKHz, mode);
-                } else if (freqKHz != null) {
-                    console.log(`[KSR] Tuning to ${freqKHz} kHz`);
-                    kiwi.setFreqMode(freqKHz, kiwi.getMode());
-                } else if (mode != null) {
-                    console.log(`[KSR] Switching mode to ${mode}`);
-                    kiwi.setMode(mode);
-                }
-
-                // Small delay for tuning to settle, then start recording
-                const recDelay = shouldTune ? 500 : 0;
-                setTimeout(() => {
-                    kiwi.startRec();
-                    state.wasRecording = true;
-                    setStatus(t.statusRecording, 'recording');
-                }, recDelay);
+                doTuneAndStartRec(freqKHz, mode);
             }, startDelay);
 
-            state.stopTimer = setTimeout(doStop, stopDelay);
+            state.stopTimer = setTimeout(doStop, endTime.getTime() - now.getTime());
         }
 
         startCountdown();
         startMonitor();
-        console.log(`[KSR] Scheduled: ${formatTime(startTime)} → ${formatTime(endTime)}`);
     }
 
     // ==================== Event Handlers ====================
     function setupEvents() {
-        // Confirm
         document.getElementById('ksr-confirm').addEventListener('click', () => {
             const startStr = document.getElementById('ksr-start').value;
             const endStr = document.getElementById('ksr-end').value;
@@ -516,16 +552,15 @@
             const endTime = new Date(endStr);
             const now = new Date();
 
-            // Validate
             if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
                 alert(t.errInvalidTime);
                 return;
             }
-            if (startTime <= now) {
-                alert(t.errStartPast);
+            if (endTime <= now) {
+                alert(t.errEndPast);
                 return;
             }
-            if (endTime <= startTime) {
+            if (endTime <= startTime && startTime > now) {
                 alert(t.errEndBeforeStart);
                 return;
             }
@@ -540,14 +575,14 @@
             }
 
             const mode = modeVal || null;
+            const startNow = (startTime <= now);
 
-            scheduleRecording(startTime, endTime, freqKHz, mode, saveWF);
+            scheduleRecording(startTime, endTime, freqKHz, mode, saveWF, startNow);
         });
 
-        // Cancel
         document.getElementById('ksr-cancel').addEventListener('click', () => {
+            log(t.logCancelled, 'warn');
             clearSchedule();
-            setStatus(t.statusCancelled, '');
         });
     }
 
@@ -558,11 +593,10 @@
         setupToggle(panel);
         setupEvents();
 
-        // Periodically update current freq/mode info
         setInterval(updateInfo, 1000);
         updateInfo();
 
-        console.log('[KSR] KiwiSDR Scheduled Recorder v2.0 loaded');
+        log(t.logReady, 'ok');
     }
 
     // Wait for KiwiSDR to be ready
